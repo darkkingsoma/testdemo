@@ -9,15 +9,9 @@ import InfiniteMovieScroll from './components/InfiniteMovieScroll';
 import SearchBar from './components/SearchBar';
 import { useSearchParams } from 'next/navigation';
 
-// Custom hook to handle search params
-function useSearchParamsWrapper() {
-  const searchParams = useSearchParams();
-  return searchParams;
-}
-
 // Client component that handles search params
 function PageContent() {
-  const searchParams = useSearchParamsWrapper();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
