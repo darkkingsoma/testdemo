@@ -9,13 +9,9 @@ import InfiniteMovieScroll from './components/InfiniteMovieScroll';
 import SearchBar from './components/SearchBar';
 import { useSearchParams } from 'next/navigation';
 
-// Create a client component for search params
-function SearchParamsWrapper({ children }) {
+// Create a client component for the main content
+function MainContent() {
   const searchParams = useSearchParams();
-  return children(searchParams);
-}
-
-export default function Home() {
   const { data: session, status } = useSession();
   const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
@@ -706,573 +702,574 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    console.log('Session status:', status, 'Session:', session);
+    if (status !== 'loading' && session) {
+      // Fetch user movies for all sections
+      const fetchAllUserMovies = async () => {
+        await Promise.all([
+          fetchUserMovies('watching', true),
+          fetchUserMovies('will-watch', true),
+          fetchUserMovies('already-watched', true)
+        ]);
+      };
+      fetchAllUserMovies();
+    }
+    if (status !== 'loading') {
+      fetchMoviesForSection('popular-movies');
+      fetchMoviesForSection('upcoming-movies');
+      fetchMoviesForSection('top-rated-movies');
+      fetchBhutaneseMovies();
+      Object.keys(carousels).forEach((sectionId) => {
+        const carousel = carousels[sectionId].current;
+        if (carousel) {
+          carousel.addEventListener('scroll', handleScroll(sectionId));
+        }
+      });
+    }
+
+    // Add event listener for showing sign-in modal
+    const handleShowSignIn = () => {
+      setShowSignIn(true);
+    };
+    window.addEventListener('showSignIn', handleShowSignIn);
+
+    // Get section from URL parameters
+    const section = searchParams.get('section');
+    if (section) {
+      // Map section IDs to their refs
+      const sectionRefs = {
+        'watching': watchingRef,
+        'will-watch': watchLaterRef,
+        'already-watched': alreadyWatchedRef,
+        'popular-movies': popularRef,
+        'top-rated-movies': topRatedRef,
+        'upcoming-movies': upcomingRef,
+        'local-movies': bhutaneseMoviesRef
+      };
+
+      const ref = sectionRefs[section];
+      if (ref?.current) {
+        // Wait for the page to load
+        setTimeout(() => {
+          const elementPosition = ref.current.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - 64; // 64px is header height
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        }, 100);
+      }
+    }
+
+    return () => {
+      Object.keys(carousels).forEach((sectionId) => {
+        const carousel = carousels[sectionId].current;
+        if (carousel) {
+          carousel.removeEventListener('scroll', handleScroll(sectionId));
+        }
+      });
+      // Clean up event listener
+      window.removeEventListener('showSignIn', handleShowSignIn);
+    };
+  }, [status, session, searchParams]);
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-black">
+        <div className="animate-pulse">
+          <div className="h-16 bg-gray-900"></div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="h-8 bg-gray-800 rounded w-1/4 mb-8"></div>
+            <div className="h-64 bg-gray-800 rounded mb-8"></div>
+            <div className="h-8 bg-gray-800 rounded w-1/4 mb-8"></div>
+            <div className="h-64 bg-gray-800 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <SearchParamsWrapper>
-        {(searchParams) => {
-          useEffect(() => {
-            console.log('Session status:', status, 'Session:', session);
-            if (status !== 'loading' && session) {
-              // Fetch user movies for all sections
-              const fetchAllUserMovies = async () => {
-                await Promise.all([
-                  fetchUserMovies('watching', true),
-                  fetchUserMovies('will-watch', true),
-                  fetchUserMovies('already-watched', true)
-                ]);
-              };
-              fetchAllUserMovies();
-            }
-            if (status !== 'loading') {
-              fetchMoviesForSection('popular-movies');
-              fetchMoviesForSection('upcoming-movies');
-              fetchMoviesForSection('top-rated-movies');
-              fetchBhutaneseMovies();
-              Object.keys(carousels).forEach((sectionId) => {
-                const carousel = carousels[sectionId].current;
-                if (carousel) {
-                  carousel.addEventListener('scroll', handleScroll(sectionId));
-                }
-              });
-            }
-
-            // Add event listener for showing sign-in modal
-            const handleShowSignIn = () => {
-              setShowSignIn(true);
-            };
-            window.addEventListener('showSignIn', handleShowSignIn);
-
-            // Get section from URL parameters
-            const section = searchParams.get('section');
-            if (section) {
-              // Map section IDs to their refs
-              const sectionRefs = {
-                'watching': watchingRef,
-                'will-watch': watchLaterRef,
-                'already-watched': alreadyWatchedRef,
-                'popular-movies': popularRef,
-                'top-rated-movies': topRatedRef,
-                'upcoming-movies': upcomingRef,
-                'local-movies': bhutaneseMoviesRef
-              };
-
-              const ref = sectionRefs[section];
-              if (ref?.current) {
-                // Wait for the page to load
-                setTimeout(() => {
-                  const elementPosition = ref.current.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - 64; // 64px is header height
-
-                  window.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                  });
-                }, 100);
-              }
-            }
-
-            return () => {
-              Object.keys(carousels).forEach((sectionId) => {
-                const carousel = carousels[sectionId].current;
-                if (carousel) {
-                  carousel.removeEventListener('scroll', handleScroll(sectionId));
-                }
-              });
-              // Clean up event listener
-              window.removeEventListener('showSignIn', handleShowSignIn);
-            };
-          }, [status, session, searchParams]);
-
-          if (status === 'loading') {
-            return (
-              <div className="min-h-screen bg-black">
-                <div className="animate-pulse">
-                  <div className="h-16 bg-gray-900"></div>
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="h-8 bg-gray-800 rounded w-1/4 mb-8"></div>
-                    <div className="h-64 bg-gray-800 rounded mb-8"></div>
-                    <div className="h-8 bg-gray-800 rounded w-1/4 mb-8"></div>
-                    <div className="h-64 bg-gray-800 rounded"></div>
-                  </div>
+    <main className="min-h-screen bg-gray-900 text-white">
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <main className="flex-1">
+          {/* Header */}
+          <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/80 backdrop-blur-xl border-b border-white/5">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                  MyMovieList
+                </h1>
+                <div className="flex items-center gap-4">
+                  {session ? (
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => signOut()}
+                        className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setShowSignIn(true)}
+                        className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
+                      >
+                        Sign In
+                      </button>
+                      <button
+                        onClick={() => setShowSignUp(true)}
+                        className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-500 hover:to-red-600 transition-all duration-300 shadow-lg hover:shadow-red-500/20"
+                      >
+                        Sign Up
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-            );
-          }
+            </div>
+          </header>
 
-          return (
-            <main className="min-h-screen bg-gray-900 text-white">
-              <div className="min-h-screen bg-black text-white flex flex-col">
-                <main className="flex-1">
-                  {/* Header */}
-                  <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/80 backdrop-blur-xl border-b border-white/5">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                      <div className="flex items-center justify-between h-16">
-                        <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                          MyMovieList
-                        </h1>
-                        <div className="flex items-center gap-4">
-                          {session ? (
-                            <div className="flex items-center gap-4">
-                              <button
-                                onClick={() => signOut()}
-                                className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
-                              >
-                                Sign Out
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-4">
-                              <button
-                                onClick={() => setShowSignIn(true)}
-                                className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
-                              >
-                                Sign In
-                              </button>
-                              <button
-                                onClick={() => setShowSignUp(true)}
-                                className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-500 hover:to-red-600 transition-all duration-300 shadow-lg hover:shadow-red-500/20"
-                              >
-                                Sign Up
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </header>
+          {/* Main Content */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+            {/* Search Forms */}
+            <div ref={homeRef} className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+              <div className="bg-gray-900/50 p-6 rounded-xl shadow-xl border border-white/5">
+                <h2 className="text-xl font-bold mb-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                  Search Movies
+                </h2>
+                <SearchBar 
+                  onSearch={(query) => {
+                    setSearchQuery(query);
+                    searchMovies({ preventDefault: () => {} });
+                  }}
+                  placeholder="Search for movies..."
+                />
+              </div>
 
-                  {/* Main Content */}
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
-                    {/* Search Forms */}
-                    <div ref={homeRef} className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                      <div className="bg-gray-900/50 p-6 rounded-xl shadow-xl border border-white/5">
-                        <h2 className="text-xl font-bold mb-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                          Search Movies
-                        </h2>
-                        <SearchBar 
-                          onSearch={(query) => {
-                            setSearchQuery(query);
-                            searchMovies({ preventDefault: () => {} });
-                          }}
-                          placeholder="Search for movies..."
-                        />
-                      </div>
+              <div className="bg-gray-900/50 p-6 rounded-xl shadow-xl border border-white/5">
+                <h2 className="text-xl font-bold mb-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                  Search Bhutanese Movies
+                </h2>
+                <SearchBar 
+                  onSearch={(query) => {
+                    setBhutaneseSearchQuery(query);
+                    searchBhutaneseMovies({ preventDefault: () => {} });
+                  }}
+                  placeholder="Search for Bhutanese movies..."
+                />
+              </div>
+            </div>
 
-                      <div className="bg-gray-900/50 p-6 rounded-xl shadow-xl border border-white/5">
-                        <h2 className="text-xl font-bold mb-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                          Search Bhutanese Movies
-                        </h2>
-                        <SearchBar 
-                          onSearch={(query) => {
-                            setBhutaneseSearchQuery(query);
-                            searchBhutaneseMovies({ preventDefault: () => {} });
-                          }}
-                          placeholder="Search for Bhutanese movies..."
-                        />
-                      </div>
-                    </div>
+            {/* Genre Filter */}
+            <div className="mb-12">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                  Filter by Genre
+                </h2>
+                {selectedGenres.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setSelectedGenres([]);
+                      setMovieSectionState((prev) => ({
+                        ...prev,
+                        'popular-movies': { ...prev['popular-movies'], page: 1, genre: 'all', movies: [], error: null },
+                        'upcoming-movies': { ...prev['upcoming-movies'], page: 1, genre: 'all', movies: [], error: null },
+                        'top-rated-movies': { ...prev['top-rated-movies'], page: 1, genre: 'all', movies: [], error: null },
+                        'bhutanese-movies': { ...prev['bhutanese-movies'], pageToken: '', genre: 'all', searchQuery: '', movies: [], error: null },
+                      }));
+                      fetchMoviesForSection('popular-movies', true);
+                      fetchMoviesForSection('upcoming-movies', true);
+                      fetchMoviesForSection('top-rated-movies', true);
+                      fetchBhutaneseMovies('', '', true);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(genreLookup).map(([id, name]) => (
+                  <button
+                    key={id}
+                    onClick={() => handleGenreChange(name.toLowerCase())}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                      selectedGenres.includes(name.toLowerCase())
+                        ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-500/20'
+                        : 'bg-gray-800/50 text-white/70 hover:bg-gray-800 hover:text-white'
+                    }`}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                    {/* Genre Filter */}
-                    <div className="mb-12">
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                          Filter by Genre
-                        </h2>
-                        {selectedGenres.length > 0 && (
-                          <button
-                            onClick={() => {
-                              setSelectedGenres([]);
-                              setMovieSectionState((prev) => ({
-                                ...prev,
-                                'popular-movies': { ...prev['popular-movies'], page: 1, genre: 'all', movies: [], error: null },
-                                'upcoming-movies': { ...prev['upcoming-movies'], page: 1, genre: 'all', movies: [], error: null },
-                                'top-rated-movies': { ...prev['top-rated-movies'], page: 1, genre: 'all', movies: [], error: null },
-                                'bhutanese-movies': { ...prev['bhutanese-movies'], pageToken: '', genre: 'all', searchQuery: '', movies: [], error: null },
-                              }));
-                              fetchMoviesForSection('popular-movies', true);
-                              fetchMoviesForSection('upcoming-movies', true);
-                              fetchMoviesForSection('top-rated-movies', true);
-                              fetchBhutaneseMovies('', '', true);
-                            }}
-                            className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
-                          >
-                            Clear Filters
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(genreLookup).map(([id, name]) => (
-                          <button
-                            key={id}
-                            onClick={() => handleGenreChange(name.toLowerCase())}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-                              selectedGenres.includes(name.toLowerCase())
-                                ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-500/20'
-                                : 'bg-gray-800/50 text-white/70 hover:bg-gray-800 hover:text-white'
-                            }`}
-                          >
-                            {name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+            {/* Search Results */}
+            {searchResults.length > 0 && (
+              <div className="mb-12">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                    Search Results
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setSearchResults([]);
+                      setSearchQuery('');
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
+                  >
+                    Clear Results
+                  </button>
+                </div>
+                <InfiniteMovieScroll
+                  movies={searchResults}
+                  title=""
+                  source="tmdb"
+                />
+              </div>
+            )}
 
-                    {/* Search Results */}
-                    {searchResults.length > 0 && (
-                      <div className="mb-12">
-                        <div className="flex items-center justify-between mb-4">
-                          <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                            Search Results
-                          </h2>
-                          <button
-                            onClick={() => {
-                              setSearchResults([]);
-                              setSearchQuery('');
-                            }}
-                            className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
-                          >
-                            Clear Results
-                          </button>
-                        </div>
-                        <InfiniteMovieScroll
-                          movies={searchResults}
-                          title=""
-                          source="tmdb"
-                        />
-                      </div>
-                    )}
+            {/* Bhutanese Movies Search Results */}
+            {bhutaneseSearchQuery && movieSectionState['bhutanese-movies'].movies.length > 0 && (
+              <div className="mb-12">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                    Bhutanese Movies Search Results
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setBhutaneseSearchQuery('');
+                      setMovieSectionState(prev => ({
+                        ...prev,
+                        'bhutanese-movies': {
+                          ...prev['bhutanese-movies'],
+                          searchQuery: '',
+                          movies: [],
+                          pageToken: '',
+                          error: null
+                        }
+                      }));
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
+                  >
+                    Clear Results
+                  </button>
+                </div>
+                <InfiniteMovieScroll
+                  movies={movieSectionState['bhutanese-movies'].movies}
+                  title=""
+                  source="youtube"
+                />
+              </div>
+            )}
 
-                    {/* Bhutanese Movies Search Results */}
-                    {bhutaneseSearchQuery && movieSectionState['bhutanese-movies'].movies.length > 0 && (
-                      <div className="mb-12">
-                        <div className="flex items-center justify-between mb-4">
-                          <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                            Bhutanese Movies Search Results
-                          </h2>
-                          <button
-                            onClick={() => {
-                              setBhutaneseSearchQuery('');
-                              setMovieSectionState(prev => ({
-                                ...prev,
-                                'bhutanese-movies': {
-                                  ...prev['bhutanese-movies'],
-                                  searchQuery: '',
-                                  movies: [],
-                                  pageToken: '',
-                                  error: null
-                                }
-                              }));
-                            }}
-                            className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
-                          >
-                            Clear Results
-                          </button>
-                        </div>
-                        <InfiniteMovieScroll
-                          movies={movieSectionState['bhutanese-movies'].movies}
-                          title=""
-                          source="youtube"
-                        />
-                      </div>
-                    )}
-
-                    {/* When genres are selected, show TMDB sections first */}
-                    {selectedGenres.length > 0 && (
-                      <div className="space-y-12 mb-12">
-                        {/* Popular Movies */}
-                        <div ref={popularRef}>
-                          <InfiniteMovieScroll
-                            movies={movieSectionState['popular-movies'].movies}
-                            title="Popular Movies"
-                            source="tmdb"
-                          />
-                        </div>
-
-                        {/* Top Rated Movies */}
-                        <div ref={topRatedRef}>
-                          <InfiniteMovieScroll
-                            movies={movieSectionState['top-rated-movies'].movies}
-                            title="Top Rated Movies"
-                            source="tmdb"
-                          />
-                        </div>
-
-                        {/* Upcoming Movies */}
-                        <div ref={upcomingRef}>
-                          <InfiniteMovieScroll
-                            movies={movieSectionState['upcoming-movies'].movies}
-                            title="Upcoming Movies"
-                            source="tmdb"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* User Lists - Always show these sections */}
-                    {session && (
-                      <div className="space-y-12 mb-12">
-                        {/* Currently Watching */}
-                        <div ref={watchingRef}>
-                          <InfiniteMovieScroll
-                            movies={movieSectionState['watching'].movies}
-                            title="Currently Watching"
-                            category="watching"
-                            onDelete={(movieId) => handleDeleteMovie('watching', movieId)}
-                            source="tmdb"
-                          />
-                        </div>
-
-                        {/* Will Watch */}
-                        <div ref={watchLaterRef}>
-                          <InfiniteMovieScroll
-                            movies={movieSectionState['will-watch'].movies}
-                            title="Watch Later"
-                            category="will-watch"
-                            onDelete={(movieId) => handleDeleteMovie('will-watch', movieId)}
-                            source="tmdb"
-                          />
-                        </div>
-
-                        {/* Already Watched */}
-                        <div ref={alreadyWatchedRef}>
-                          <InfiniteMovieScroll
-                            movies={movieSectionState['already-watched'].movies}
-                            title="Already Watched"
-                            category="already-watched"
-                            onDelete={(movieId) => handleDeleteMovie('already-watched', movieId)}
-                            source="tmdb"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* When no genres are selected, show TMDB sections after user lists */}
-                    {selectedGenres.length === 0 && (
-                      <div className="space-y-12 mb-12">
-                        {/* Popular Movies */}
-                        <div ref={popularRef}>
-                          <InfiniteMovieScroll
-                            movies={movieSectionState['popular-movies'].movies}
-                            title="Popular Movies"
-                            source="tmdb"
-                          />
-                        </div>
-
-                        {/* Top Rated Movies */}
-                        <div ref={topRatedRef}>
-                          <InfiniteMovieScroll
-                            movies={movieSectionState['top-rated-movies'].movies}
-                            title="Top Rated Movies"
-                            source="tmdb"
-                          />
-                        </div>
-
-                        {/* Upcoming Movies */}
-                        <div ref={upcomingRef}>
-                          <InfiniteMovieScroll
-                            movies={movieSectionState['upcoming-movies'].movies}
-                            title="Upcoming Movies"
-                            source="tmdb"
-                          />
-                        </div>
-
-                        {/* Bhutanese Movies - Only show when no search is active */}
-                        {!bhutaneseSearchQuery && (
-                          <div ref={bhutaneseMoviesRef}>
-                            <InfiniteMovieScroll
-                              movies={movieSectionState['bhutanese-movies'].movies}
-                              title="Bhutanese Movies"
-                              source="youtube"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </main>
-
-                {/* Footer */}
-                <div className="mt-auto">
-                  <Footer 
-                    homeRef={homeRef}
-                    popularRef={popularRef}
-                    topRatedRef={topRatedRef}
-                    upcomingRef={upcomingRef}
-                    localMoviesRef={bhutaneseMoviesRef}
-                    watchingRef={watchingRef}
-                    watchLaterRef={watchLaterRef}
-                    alreadyWatchedRef={alreadyWatchedRef}
-                    onShowSignIn={() => setShowSignInModal(true)}
+            {/* When genres are selected, show TMDB sections first */}
+            {selectedGenres.length > 0 && (
+              <div className="space-y-12 mb-12">
+                {/* Popular Movies */}
+                <div ref={popularRef}>
+                  <InfiniteMovieScroll
+                    movies={movieSectionState['popular-movies'].movies}
+                    title="Popular Movies"
+                    source="tmdb"
                   />
                 </div>
 
-                {/* Sign In Modal */}
-                {showSignIn && (
-                  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-gray-900 p-8 rounded-xl shadow-2xl border border-white/5 w-full max-w-md">
-                      <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                        Sign In
-                      </h2>
-                      <form onSubmit={handleSignIn} className="space-y-4">
-                        <div>
-                          <label htmlFor="username" className="block text-sm font-medium text-white/70 mb-2">
-                            Username
-                          </label>
-                          <input
-                            type="text"
-                            id="username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="w-full px-4 py-2 bg-gray-800 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="password" className="block text-sm font-medium text-white/70 mb-2">
-                            Password
-                          </label>
-                          <input
-                            type="password"
-                            id="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-2 bg-gray-800 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                            required
-                          />
-                        </div>
-                        {error && (
-                          <p className="text-red-500 text-sm">{error}</p>
-                        )}
-                        <div className="flex justify-end gap-4">
-                          <button
-                            type="button"
-                            onClick={() => setShowSignIn(false)}
-                            className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="submit"
-                            className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-500 hover:to-red-600 transition-all duration-300 shadow-lg hover:shadow-red-500/20"
-                          >
-                            Sign In
-                          </button>
-                        </div>
-                      </form>
-                      <div className="mt-6">
-                        <div className="relative">
-                          <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-white/10"></div>
-                          </div>
-                          <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-gray-900 text-white/70">Or continue with</span>
-                          </div>
-                        </div>
-                        <div className="mt-6">
-                          <button
-                            onClick={() => signIn('google', { callbackUrl: '/' })}
-                            className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-white/10 rounded-lg hover:bg-white/5 transition-colors duration-200"
-                          >
-                            <svg className="w-5 h-5" viewBox="0 0 24 24">
-                              <path
-                                fill="currentColor"
-                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                              />
-                              <path
-                                fill="currentColor"
-                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                              />
-                              <path
-                                fill="currentColor"
-                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                              />
-                              <path
-                                fill="currentColor"
-                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                              />
-                            </svg>
-                            <span>Google</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Top Rated Movies */}
+                <div ref={topRatedRef}>
+                  <InfiniteMovieScroll
+                    movies={movieSectionState['top-rated-movies'].movies}
+                    title="Top Rated Movies"
+                    source="tmdb"
+                  />
+                </div>
 
-                {/* Sign Up Modal */}
-                {showSignUp && (
-                  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-gray-900 p-8 rounded-xl shadow-2xl border border-white/5 w-full max-w-md">
-                      <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                        Sign Up
-                      </h2>
-                      <form onSubmit={handleSignUp} className="space-y-4">
-                        <div>
-                          <label htmlFor="signup-username" className="block text-sm font-medium text-white/70 mb-2">
-                            Username
-                          </label>
-                          <input
-                            type="text"
-                            id="signup-username"
-                            value={signUpUsername}
-                            onChange={(e) => setSignUpUsername(e.target.value)}
-                            className="w-full px-4 py-2 bg-gray-800 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="signup-password" className="block text-sm font-medium text-white/70 mb-2">
-                            Password
-                          </label>
-                          <input
-                            type="password"
-                            id="signup-password"
-                            value={signUpPassword}
-                            onChange={(e) => setSignUpPassword(e.target.value)}
-                            className="w-full px-4 py-2 bg-gray-800 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="signup-confirm-password" className="block text-sm font-medium text-white/70 mb-2">
-                            Confirm Password
-                          </label>
-                          <input
-                            type="password"
-                            id="signup-confirm-password"
-                            value={signUpConfirmPassword}
-                            onChange={(e) => setSignUpConfirmPassword(e.target.value)}
-                            className="w-full px-4 py-2 bg-gray-800 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                            required
-                          />
-                        </div>
-                        {error && (
-                          <p className="text-red-500 text-sm">{error}</p>
-                        )}
-                        <div className="flex justify-end gap-4">
-                          <button
-                            type="button"
-                            onClick={() => setShowSignUp(false)}
-                            className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="submit"
-                            className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-500 hover:to-red-600 transition-all duration-300 shadow-lg hover:shadow-red-500/20"
-                          >
-                            Sign Up
-                          </button>
-                        </div>
-                      </form>
-                    </div>
+                {/* Upcoming Movies */}
+                <div ref={upcomingRef}>
+                  <InfiniteMovieScroll
+                    movies={movieSectionState['upcoming-movies'].movies}
+                    title="Upcoming Movies"
+                    source="tmdb"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* User Lists - Always show these sections */}
+            {session && (
+              <div className="space-y-12 mb-12">
+                {/* Currently Watching */}
+                <div ref={watchingRef}>
+                  <InfiniteMovieScroll
+                    movies={movieSectionState['watching'].movies}
+                    title="Currently Watching"
+                    category="watching"
+                    onDelete={(movieId) => handleDeleteMovie('watching', movieId)}
+                    source="tmdb"
+                  />
+                </div>
+
+                {/* Will Watch */}
+                <div ref={watchLaterRef}>
+                  <InfiniteMovieScroll
+                    movies={movieSectionState['will-watch'].movies}
+                    title="Watch Later"
+                    category="will-watch"
+                    onDelete={(movieId) => handleDeleteMovie('will-watch', movieId)}
+                    source="tmdb"
+                  />
+                </div>
+
+                {/* Already Watched */}
+                <div ref={alreadyWatchedRef}>
+                  <InfiniteMovieScroll
+                    movies={movieSectionState['already-watched'].movies}
+                    title="Already Watched"
+                    category="already-watched"
+                    onDelete={(movieId) => handleDeleteMovie('already-watched', movieId)}
+                    source="tmdb"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* When no genres are selected, show TMDB sections after user lists */}
+            {selectedGenres.length === 0 && (
+              <div className="space-y-12 mb-12">
+                {/* Popular Movies */}
+                <div ref={popularRef}>
+                  <InfiniteMovieScroll
+                    movies={movieSectionState['popular-movies'].movies}
+                    title="Popular Movies"
+                    source="tmdb"
+                  />
+                </div>
+
+                {/* Top Rated Movies */}
+                <div ref={topRatedRef}>
+                  <InfiniteMovieScroll
+                    movies={movieSectionState['top-rated-movies'].movies}
+                    title="Top Rated Movies"
+                    source="tmdb"
+                  />
+                </div>
+
+                {/* Upcoming Movies */}
+                <div ref={upcomingRef}>
+                  <InfiniteMovieScroll
+                    movies={movieSectionState['upcoming-movies'].movies}
+                    title="Upcoming Movies"
+                    source="tmdb"
+                  />
+                </div>
+
+                {/* Bhutanese Movies - Only show when no search is active */}
+                {!bhutaneseSearchQuery && (
+                  <div ref={bhutaneseMoviesRef}>
+                    <InfiniteMovieScroll
+                      movies={movieSectionState['bhutanese-movies'].movies}
+                      title="Bhutanese Movies"
+                      source="youtube"
+                    />
                   </div>
                 )}
               </div>
-            </main>
-          );
-        }}
-      </SearchParamsWrapper>
+            )}
+          </div>
+        </main>
+
+        {/* Footer */}
+        <div className="mt-auto">
+          <Footer 
+            homeRef={homeRef}
+            popularRef={popularRef}
+            topRatedRef={topRatedRef}
+            upcomingRef={upcomingRef}
+            localMoviesRef={bhutaneseMoviesRef}
+            watchingRef={watchingRef}
+            watchLaterRef={watchLaterRef}
+            alreadyWatchedRef={alreadyWatchedRef}
+            onShowSignIn={() => setShowSignInModal(true)}
+          />
+        </div>
+
+        {/* Sign In Modal */}
+        {showSignIn && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-gray-900 p-8 rounded-xl shadow-2xl border border-white/5 w-full max-w-md">
+              <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                Sign In
+              </h2>
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div>
+                  <label htmlFor="username" className="block text-sm font-medium text-white/70 mb-2">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-800 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-white/70 mb-2">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-800 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    required
+                  />
+                </div>
+                {error && (
+                  <p className="text-red-500 text-sm">{error}</p>
+                )}
+                <div className="flex justify-end gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowSignIn(false)}
+                    className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-500 hover:to-red-600 transition-all duration-300 shadow-lg hover:shadow-red-500/20"
+                  >
+                    Sign In
+                  </button>
+                </div>
+              </form>
+              <div className="mt-6">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-white/10"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-gray-900 text-white/70">Or continue with</span>
+                  </div>
+                </div>
+                <div className="mt-6">
+                  <button
+                    onClick={() => signIn('google', { callbackUrl: '/' })}
+                    className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-white/10 rounded-lg hover:bg-white/5 transition-colors duration-200"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path
+                        fill="currentColor"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="currentColor"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="currentColor"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                      />
+                      <path
+                        fill="currentColor"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      />
+                    </svg>
+                    <span>Google</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sign Up Modal */}
+        {showSignUp && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-gray-900 p-8 rounded-xl shadow-2xl border border-white/5 w-full max-w-md">
+              <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                Sign Up
+              </h2>
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div>
+                  <label htmlFor="signup-username" className="block text-sm font-medium text-white/70 mb-2">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    id="signup-username"
+                    value={signUpUsername}
+                    onChange={(e) => setSignUpUsername(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-800 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="signup-password" className="block text-sm font-medium text-white/70 mb-2">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    id="signup-password"
+                    value={signUpPassword}
+                    onChange={(e) => setSignUpPassword(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-800 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="signup-confirm-password" className="block text-sm font-medium text-white/70 mb-2">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    id="signup-confirm-password"
+                    value={signUpConfirmPassword}
+                    onChange={(e) => setSignUpConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-800 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    required
+                  />
+                </div>
+                {error && (
+                  <p className="text-red-500 text-sm">{error}</p>
+                )}
+                <div className="flex justify-end gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowSignUp(false)}
+                    className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-500 hover:to-red-600 transition-all duration-300 shadow-lg hover:shadow-red-500/20"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
+// Main page component
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MainContent />
     </Suspense>
   );
 }
