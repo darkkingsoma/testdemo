@@ -11,20 +11,20 @@ export const authOptions = {
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        username: { label: "Email", type: "text" },
+        username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) {
-          throw new Error('Please enter your email and password');
+          throw new Error('Please enter your username and password');
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.username }
+          where: { username: credentials.username }
         });
 
         if (!user) {
-          throw new Error('No user found with this email');
+          throw new Error('No user found with this username');
         }
 
         const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
@@ -37,6 +37,7 @@ export const authOptions = {
           id: user.id.toString(),
           name: user.name,
           email: user.email,
+          username: user.username,
         };
       }
     }),
@@ -61,9 +62,21 @@ export const authOptions = {
           });
 
           if (!existingUser) {
+            // Generate a unique username from email
+            const baseUsername = user.email.split('@')[0];
+            let username = baseUsername;
+            let counter = 1;
+            
+            // Keep trying until we find a unique username
+            while (await prisma.user.findUnique({ where: { username } })) {
+              username = `${baseUsername}${counter}`;
+              counter++;
+            }
+
             await prisma.user.create({
               data: {
                 email: user.email,
+                username: username,
                 name: user.name || null,
                 password: '', // Google users don't need a password
                 image: user.image || null,
@@ -85,6 +98,7 @@ export const authOptions = {
         });
         if (user) {
           session.user.id = user.id.toString();
+          session.user.username = user.username;
         }
       }
       return session;

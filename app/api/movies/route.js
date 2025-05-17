@@ -15,7 +15,7 @@ export async function GET(request) {
 
     const userMovies = await prisma.movieList.findMany({
       where: { 
-        userId: parseInt(session.user.id)
+        userId: session.user.id // No need to parse as integer anymore
       },
     });
 
@@ -91,13 +91,13 @@ export async function POST(request) {
     const normalizedCategory = categoryMap[category] || category.toLowerCase();
     console.log('Normalized category:', normalizedCategory);
 
-    // Ensure userId is a number
-    const userId = parseInt(session.user.id);
-    if (isNaN(userId)) {
+    // Use userId directly as string
+    const userId = session.user.id;
+    if (!userId) {
       console.error('Invalid userId:', session.user.id);
       return NextResponse.json({ 
         error: 'Invalid user ID',
-        details: 'User ID must be a number'
+        details: 'User ID is required'
       }, { status: 400 });
     }
 

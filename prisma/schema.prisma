@@ -9,9 +9,10 @@ datasource db {
 }
 
 model User {
-  id         Int         @id @default(autoincrement())
-  email      String      @unique
-  password   String?
+  id         String     @id @default(cuid())
+  email      String     @unique
+  username   String     @unique
+  password   String
   name       String?
   image      String?
   movieLists MovieList[]
@@ -21,18 +22,18 @@ model User {
 }
 
 model MovieList {
-  id          Int      @id @default(autoincrement())
-  userId      Int
+  id          String   @id @default(cuid())
+  userId      String
   movieId     String
   title       String
   poster      String
   category    String
-  overview    String   @db.Text @default("")
+  overview    String   @db.Text
   releaseDate String   @default("")
   rating      String   @default("N/A")
   votes       String   @default("0")
   genreIds    String   @default("[]")
-  description String   @db.Text @default("")
+  description String   @db.Text
   source      String   @default("tmdb")
   user        User     @relation(fields: [userId], references: [id])
 
@@ -41,14 +42,14 @@ model MovieList {
 }
 
 model Comment {
-  id        String   @id @default(cuid())
-  videoId   String
-  text      String
-  authorName String
-  userId    Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id])
+  id          String   @id @default(cuid())
+  videoId     String
+  text        String
+  authorName  String
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
 
   @@index([videoId])
   @@index([userId])

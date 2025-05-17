@@ -17,15 +17,24 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Movie ID and category are required' }, { status: 400 });
     }
 
-    await prisma.movieList.deleteMany({
+    console.log('Deleting movie:', { movieId, category, userId: session.user.id });
+
+    // Delete the movie from the user's list
+    const deletedMovie = await prisma.movieList.deleteMany({
       where: {
-        userId: parseInt(session.user.id),
+        userId: session.user.id,
         movieId: movieId.toString(),
         category: category
       }
     });
 
-    return NextResponse.json({ message: 'Movie removed from list' });
+    console.log('Deleted movie result:', deletedMovie);
+
+    if (deletedMovie.count === 0) {
+      return NextResponse.json({ error: 'Movie not found in list' }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: 'Movie removed from list', deleted: deletedMovie });
   } catch (error) {
     console.error('Delete movie error:', error);
     return NextResponse.json({ error: 'Failed to remove movie from list' }, { status: 500 });

@@ -15,12 +15,15 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Use username as authorName if not provided
+    const displayName = authorName || session.user.username || session.user.name || 'Anonymous';
+
     const comment = await prisma.comment.create({
       data: {
         videoId,
         text,
-        authorName,
-        userId: parseInt(session.user.id),
+        authorName: displayName,
+        userId: session.user.id, // Use string ID directly
       },
     });
 
@@ -46,6 +49,7 @@ export async function GET(request) {
       include: {
         user: {
           select: {
+            username: true,
             name: true,
             image: true
           }
@@ -53,7 +57,13 @@ export async function GET(request) {
       }
     });
 
-    return NextResponse.json(comments);
+    // Transform the response to include username
+    const transformedComments = comments.map(comment => ({
+      ...comment,
+      authorName: comment.authorName || comment.user.username || comment.user.name || 'Anonymous'
+    }));
+
+    return NextResponse.json(transformedComments);
   } catch (error) {
     console.error('Error fetching comments:', error);
     return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 });

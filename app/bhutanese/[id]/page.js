@@ -52,12 +52,41 @@ export default function BhutaneseMoviePage() {
         );
         
         if (!response.ok) {
-          const errorData = await response.json();
-          console.error('YouTube API Error:', errorData);
-          throw new Error(`Failed to fetch comments: ${errorData.error?.message || response.statusText}`);
+          let errorMessage = `HTTP error! status: ${response.status}`;
+          try {
+            const errorData = await response.json();
+            console.error('YouTube API Error Response:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData
+            });
+            
+            if (errorData.error?.message) {
+              errorMessage = errorData.error.message;
+            }
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError);
+            errorMessage = `Failed to fetch comments: ${response.statusText}`;
+          }
+          
+          // Check for specific error cases
+          if (response.status === 403) {
+            throw new Error('YouTube API quota exceeded or API key is invalid');
+          } else if (response.status === 404) {
+            throw new Error('Video not found or comments are disabled');
+          } else {
+            throw new Error(errorMessage);
+          }
         }
         
-        const data = await response.json();
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error('Failed to parse response:', parseError);
+          throw new Error('Failed to parse YouTube API response');
+        }
+        
         console.log('YouTube comments response:', data);
         
         if (data.items) {
@@ -361,7 +390,7 @@ export default function BhutaneseMoviePage() {
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center">
                     <span className="text-lg font-semibold">
-                      {comment.author.charAt(0).toUpperCase()}
+                      {comment.author ? comment.author.charAt(0).toUpperCase() : '?'}
                     </span>
                   </div>
                   <div className="flex-1">

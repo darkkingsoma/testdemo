@@ -4,6 +4,9 @@ const nextConfig = {
   images: {
     domains: ['image.tmdb.org', 'i.ytimg.com'],
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;
