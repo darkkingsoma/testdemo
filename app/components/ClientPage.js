@@ -15,45 +15,29 @@ export default function ClientPage() {
   const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
+  // Initialize state
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [userMovieLists, setUserMovieLists] = useState({
+    Watching: [],
+    'Will Watch': [],
+    'Already Watched': [],
+  });
+
   // ... rest of your state declarations ...
 
+  // Initialize the component
   useEffect(() => {
-    // Guard against undefined searchParams
     if (!searchParams) {
       console.log('Search params not initialized yet');
       return;
     }
 
-    // Initialize searchParams-dependent state
-    const initializeSearchParams = () => {
-      const section = searchParams.get('section');
-      if (section) {
-        // Map section IDs to their refs
-        const sectionRefs = {
-          'watching': watchingRef,
-          'will-watch': watchLaterRef,
-          'already-watched': alreadyWatchedRef,
-          'popular-movies': popularRef,
-          'top-rated-movies': topRatedRef,
-          'upcoming-movies': upcomingRef,
-          'local-movies': bhutaneseMoviesRef
-        };
+    setIsInitialized(true);
+  }, [searchParams]);
 
-        const ref = sectionRefs[section];
-        if (ref?.current) {
-          // Wait for the page to load
-          setTimeout(() => {
-            const elementPosition = ref.current.getBoundingClientRect().top;
-            const offsetPosition = elementPosition + window.pageYOffset - 64; // 64px is header height
-
-            window.scrollTo({
-              top: offsetPosition,
-              behavior: 'smooth'
-            });
-          }, 100);
-        }
-      }
-    };
+  // Main effect that runs after initialization
+  useEffect(() => {
+    if (!isInitialized || !searchParams) return;
 
     // Initialize data fetching
     const initializeData = async () => {
@@ -101,17 +85,43 @@ export default function ClientPage() {
       };
     };
 
+    // Handle section navigation
+    const handleSectionNavigation = () => {
+      const section = searchParams.get('section');
+      if (section) {
+        const sectionRefs = {
+          'watching': watchingRef,
+          'will-watch': watchLaterRef,
+          'already-watched': alreadyWatchedRef,
+          'popular-movies': popularRef,
+          'top-rated-movies': topRatedRef,
+          'upcoming-movies': upcomingRef,
+          'local-movies': bhutaneseMoviesRef
+        };
+
+        const ref = sectionRefs[section];
+        if (ref?.current) {
+          setTimeout(() => {
+            const elementPosition = ref.current.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - 64;
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }, 100);
+        }
+      }
+    };
+
     // Initialize everything
-    initializeSearchParams();
     initializeData();
     const cleanup = initializeEventListeners();
+    handleSectionNavigation();
 
     return cleanup;
-  }, [status, session, searchParams]);
+  }, [isInitialized, status, session, searchParams]);
 
-  // ... rest of your component code ...
-
-  if (status === 'loading') {
+  if (!isInitialized || status === 'loading') {
     return (
       <div className="min-h-screen bg-black">
         <div className="animate-pulse">
@@ -127,9 +137,5 @@ export default function ClientPage() {
     );
   }
 
-  return (
-    <main className="min-h-screen bg-gray-900 text-white">
-      {/* ... rest of your JSX ... */}
-    </main>
-  );
+  // ... rest of your component code ...
 } 

@@ -3,12 +3,30 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import MovieCard from './components/MovieCard';
 import GenreFilter from './components/GenreFilter';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next/auth/react';
 import Footer from './components/Footer';
 import InfiniteMovieScroll from './components/InfiniteMovieScroll';
 import SearchBar from './components/SearchBar';
 import { useSearchParams } from 'next/navigation';
-import ClientPage from './components/ClientPage';
+import dynamic from 'next/dynamic';
+
+// Dynamically import ClientPage with no SSR to ensure it only runs on client
+const ClientPage = dynamic(() => import('./components/ClientPage'), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-screen bg-black">
+      <div className="animate-pulse">
+        <div className="h-16 bg-gray-900"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="h-8 bg-gray-800 rounded w-1/4 mb-8"></div>
+          <div className="h-64 bg-gray-800 rounded mb-8"></div>
+          <div className="h-8 bg-gray-800 rounded w-1/4 mb-8"></div>
+          <div className="h-64 bg-gray-800 rounded"></div>
+        </div>
+      </div>
+    </div>
+  ),
+});
 
 // Client component that handles search params
 function PageContent() {
@@ -1271,7 +1289,19 @@ function PageContent() {
 // Main page component
 export default function Home() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-black">
+        <div className="animate-pulse">
+          <div className="h-16 bg-gray-900"></div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="h-8 bg-gray-800 rounded w-1/4 mb-8"></div>
+            <div className="h-64 bg-gray-800 rounded mb-8"></div>
+            <div className="h-8 bg-gray-800 rounded w-1/4 mb-8"></div>
+            <div className="h-64 bg-gray-800 rounded"></div>
+          </div>
+        </div>
+      </div>
+    }>
       <ClientPage />
     </Suspense>
   );
