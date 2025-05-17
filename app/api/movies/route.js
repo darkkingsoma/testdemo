@@ -15,7 +15,7 @@ export async function GET(request) {
 
     const userMovies = await prisma.movieList.findMany({
       where: { 
-        userId: session.user.id // No need to parse as integer anymore
+        userId: session.user.id
       },
     });
 
@@ -25,7 +25,6 @@ export async function GET(request) {
     // Normalize categories for comparison
     const moviesByCategory = {
       watching: userMovies.filter(movie => 
-        movie.category.toLowerCase() === 'watching' || 
         movie.category.toLowerCase() === 'watching'
       ),
       'will-watch': userMovies.filter(movie => 
@@ -58,6 +57,11 @@ export async function POST(request) {
     if (!session.user) {
       console.log('No user in session');
       return NextResponse.json({ error: 'No user in session' }, { status: 401 });
+    }
+
+    if (!session.user.id) {
+      console.log('No user ID in session');
+      return NextResponse.json({ error: 'No user ID in session' }, { status: 401 });
     }
 
     console.log('Session user object:', JSON.stringify(session.user, null, 2));
@@ -97,16 +101,6 @@ export async function POST(request) {
 
     const normalizedCategory = categoryMap[category] || category.toLowerCase();
     console.log('Normalized category:', normalizedCategory);
-
-    // Validate user ID
-    if (!session.user.id) {
-      console.error('Invalid userId in session:', session.user);
-      return NextResponse.json({ 
-        error: 'Invalid user ID',
-        details: 'User ID is missing from session',
-        session: session.user
-      }, { status: 400 });
-    }
 
     // Verify user exists
     const user = await prisma.user.findUnique({
@@ -149,7 +143,7 @@ export async function POST(request) {
       userId: session.user.id,
       movieId: movieId.toString(),
       title: title.substring(0, 191),
-      poster: poster.substring(0, 191),
+      poster: poster?.substring(0, 191) || '',
       category: normalizedCategory,
       overview: (overview || '').substring(0, 191),
       releaseDate: (releaseDate || '').substring(0, 191),
@@ -166,7 +160,7 @@ export async function POST(request) {
         userId: session.user.id,
         movieId: movieId.toString(),
         title: title.substring(0, 191),
-        poster: poster.substring(0, 191),
+        poster: poster?.substring(0, 191) || '',
         category: normalizedCategory,
         overview: (overview || '').substring(0, 191),
         releaseDate: (releaseDate || '').substring(0, 191),

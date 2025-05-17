@@ -5,7 +5,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
-const handler = NextAuth({
+export const authOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
@@ -55,7 +55,7 @@ const handler = NextAuth({
     async signIn({ user, account, profile }) {
       console.log('SignIn callback:', { user, account, profile });
       
-      if (account.provider === 'google') {
+      if (account?.provider === 'google') {
         // Check if user exists
         const existingUser = await prisma.user.findUnique({
           where: { email: profile.email }
@@ -115,6 +115,8 @@ const handler = NextAuth({
     },
   },
   debug: true,
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
