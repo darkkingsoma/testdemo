@@ -33,6 +33,15 @@ export const authOptions = {
           throw new Error('Invalid password');
         }
 
+        // Update login stats
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            lastLoginAt: new Date(),
+            loginCount: { increment: 1 }
+          }
+        });
+
         return {
           id: user.id,
           username: user.username,
@@ -69,11 +78,21 @@ export const authOptions = {
               username: profile.email.split('@')[0], // Use email prefix as username
               name: profile.name,
               password: '', // Empty password for Google users
+              lastLoginAt: new Date(),
+              loginCount: 1
             }
           });
           user.id = newUser.id;
           console.log('Created new user:', newUser);
         } else {
+          // Update login stats for existing user
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: {
+              lastLoginAt: new Date(),
+              loginCount: { increment: 1 }
+            }
+          });
           user.id = existingUser.id;
           console.log('Found existing user:', existingUser);
         }

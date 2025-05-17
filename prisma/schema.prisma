@@ -52,6 +52,8 @@ model User {
   comments      Comment[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
+  lastLoginAt   DateTime? @default(now())
+  loginCount    Int       @default(0)
 }
 
 model VerificationToken {
@@ -67,31 +69,34 @@ model MovieList {
   id          String   @id @default(cuid())
   userId      String
   movieId     String
-  title       String
-  poster      String
-  category    String
+  title       String   @db.VarChar(191)
+  poster      String   @db.VarChar(191)
+  category    String   @db.VarChar(50)
   overview    String   @db.Text
-  releaseDate String   @default("")
-  rating      String   @default("N/A")
-  votes       String   @default("0")
-  genreIds    String   @default("[]")
+  releaseDate String   @db.VarChar(191)
+  rating      String   @db.VarChar(50)
+  votes       String   @db.VarChar(50)
+  genreIds    String   @db.VarChar(191)
   description String   @db.Text
-  source      String   @default("tmdb")
-  user        User     @relation(fields: [userId], references: [id])
+  source      String   @db.VarChar(50)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([movieId])
+  @@unique([userId, movieId])
 }
 
 model Comment {
   id          String   @id @default(cuid())
   videoId     String
-  text        String
-  authorName  String
+  text        String   @db.Text
+  authorName  String   @db.VarChar(191)
   userId      String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([videoId])
   @@index([userId])
