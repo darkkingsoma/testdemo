@@ -9,9 +9,15 @@ import InfiniteMovieScroll from './components/InfiniteMovieScroll';
 import SearchBar from './components/SearchBar';
 import { useSearchParams } from 'next/navigation';
 
+// Custom hook to handle search params
+function useSearchParamsWrapper() {
+  const searchParams = useSearchParams();
+  return searchParams;
+}
+
 // Create a client component for the main content
 function MainContent() {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParamsWrapper();
   const { data: session, status } = useSession();
   const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
@@ -703,6 +709,8 @@ function MainContent() {
   };
 
   useEffect(() => {
+    if (!searchParams) return; // Guard against undefined searchParams
+
     console.log('Session status:', status, 'Session:', session);
     if (status !== 'loading' && session) {
       // Fetch user movies for all sections
