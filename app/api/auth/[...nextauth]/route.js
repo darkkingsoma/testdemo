@@ -53,6 +53,8 @@ const handler = NextAuth({
   },
   callbacks: {
     async signIn({ user, account, profile }) {
+      console.log('SignIn callback:', { user, account, profile });
+      
       if (account.provider === 'google') {
         // Check if user exists
         const existingUser = await prisma.user.findUnique({
@@ -70,24 +72,34 @@ const handler = NextAuth({
             }
           });
           user.id = newUser.id;
+          console.log('Created new user:', newUser);
         } else {
           user.id = existingUser.id;
+          console.log('Found existing user:', existingUser);
         }
       }
       return true;
     },
     async session({ session, token }) {
+      console.log('Session callback - token:', token);
+      console.log('Session callback - session before:', session);
+      
       if (token) {
         session.user.id = token.id;
         session.user.username = token.username;
       }
+      
+      console.log('Session callback - session after:', session);
       return session;
     },
     async jwt({ token, user, account, profile }) {
+      console.log('JWT callback - input:', { token, user, account, profile });
+      
       if (user) {
         token.id = user.id;
         token.username = user.username;
       }
+      
       if (account?.provider === 'google') {
         const dbUser = await prisma.user.findUnique({
           where: { email: profile.email }
@@ -97,10 +109,12 @@ const handler = NextAuth({
           token.username = dbUser.username;
         }
       }
+      
+      console.log('JWT callback - output token:', token);
       return token;
     },
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: true,
 });
 
 export { handler as GET, handler as POST };

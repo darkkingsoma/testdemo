@@ -48,12 +48,19 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const session = await getServerSession(authOptions);
+    console.log('Full session object:', JSON.stringify(session, null, 2));
+    
     if (!session) {
       console.log('No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('Session user:', session.user);
+    if (!session.user) {
+      console.log('No user in session');
+      return NextResponse.json({ error: 'No user in session' }, { status: 401 });
+    }
+
+    console.log('Session user object:', JSON.stringify(session.user, null, 2));
 
     const body = await request.json();
     console.log('Raw request body:', body);
@@ -96,7 +103,8 @@ export async function POST(request) {
       console.error('Invalid userId in session:', session.user);
       return NextResponse.json({ 
         error: 'Invalid user ID',
-        details: 'User ID is missing from session'
+        details: 'User ID is missing from session',
+        session: session.user
       }, { status: 400 });
     }
 
@@ -105,11 +113,14 @@ export async function POST(request) {
       where: { id: session.user.id }
     });
 
+    console.log('Found user in database:', user);
+
     if (!user) {
       console.error('User not found:', session.user.id);
       return NextResponse.json({ 
         error: 'User not found',
-        details: 'The user associated with this session does not exist'
+        details: 'The user associated with this session does not exist',
+        userId: session.user.id
       }, { status: 404 });
     }
 
@@ -171,6 +182,11 @@ export async function POST(request) {
     return NextResponse.json(movie);
   } catch (error) {
     console.error('Error in POST /api/movies:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error stack:', error.stack);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error.message,
+      stack: error.stack
+    }, { status: 500 });
   }
 }
