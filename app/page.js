@@ -8,6 +8,7 @@ import Footer from './components/Footer';
 import InfiniteMovieScroll from './components/InfiniteMovieScroll';
 import SearchBar from './components/SearchBar';
 import { useSearchParams } from 'next/navigation';
+import ClientPage from './components/ClientPage';
 
 // Client component that handles search params
 function PageContent() {
@@ -1271,7 +1272,7 @@ function PageContent() {
 export default function Home() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <PageContent />
+      <ClientPage />
     </Suspense>
   );
 }

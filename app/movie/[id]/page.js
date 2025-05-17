@@ -10,6 +10,9 @@ export default function MovieDetail() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
+  const { id } = useParams();
+  
+  // Initialize state with default values
   const [movie, setMovie] = useState(null);
   const [trailerUrl, setTrailerUrl] = useState('');
   const [comments, setComments] = useState([]);
@@ -22,7 +25,6 @@ export default function MovieDetail() {
   const [cast, setCast] = useState([]);
   const [tmdbComments, setTmdbComments] = useState([]);
   const [imdbId, setImdbId] = useState(null);
-  const { id } = useParams();
   const [showAddToList, setShowAddToList] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -38,9 +40,9 @@ export default function MovieDetail() {
   const watchLaterRef = useRef(null);
   const alreadyWatchedRef = useRef(null);
 
-  // Get source from URL parameters, default to 'tmdb' if not specified
-  const source = searchParams.get('source') || 'tmdb';
-  const category = searchParams.get('category');
+  // Get source and category from URL parameters with proper initialization
+  const source = searchParams?.get('source') || 'tmdb';
+  const category = searchParams?.get('category');
 
   const vidSrcUrl = imdbId
     ? `https://vidsrc.to/embed/movie/${imdbId}`

@@ -24,76 +24,89 @@ export default function ClientPage() {
       return;
     }
 
-    console.log('Session status:', status, 'Session:', session);
-    if (status !== 'loading' && session) {
-      // Fetch user movies for all sections
-      const fetchAllUserMovies = async () => {
+    // Initialize searchParams-dependent state
+    const initializeSearchParams = () => {
+      const section = searchParams.get('section');
+      if (section) {
+        // Map section IDs to their refs
+        const sectionRefs = {
+          'watching': watchingRef,
+          'will-watch': watchLaterRef,
+          'already-watched': alreadyWatchedRef,
+          'popular-movies': popularRef,
+          'top-rated-movies': topRatedRef,
+          'upcoming-movies': upcomingRef,
+          'local-movies': bhutaneseMoviesRef
+        };
+
+        const ref = sectionRefs[section];
+        if (ref?.current) {
+          // Wait for the page to load
+          setTimeout(() => {
+            const elementPosition = ref.current.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - 64; // 64px is header height
+
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }, 100);
+        }
+      }
+    };
+
+    // Initialize data fetching
+    const initializeData = async () => {
+      if (status !== 'loading' && session) {
+        // Fetch user movies for all sections
         await Promise.all([
           fetchUserMovies('watching', true),
           fetchUserMovies('will-watch', true),
           fetchUserMovies('already-watched', true)
         ]);
-      };
-      fetchAllUserMovies();
-    }
-    if (status !== 'loading') {
-      fetchMoviesForSection('popular-movies');
-      fetchMoviesForSection('upcoming-movies');
-      fetchMoviesForSection('top-rated-movies');
-      fetchBhutaneseMovies();
+      }
+      
+      if (status !== 'loading') {
+        await Promise.all([
+          fetchMoviesForSection('popular-movies'),
+          fetchMoviesForSection('upcoming-movies'),
+          fetchMoviesForSection('top-rated-movies'),
+          fetchBhutaneseMovies()
+        ]);
+      }
+    };
+
+    // Initialize event listeners
+    const initializeEventListeners = () => {
       Object.keys(carousels).forEach((sectionId) => {
         const carousel = carousels[sectionId].current;
         if (carousel) {
           carousel.addEventListener('scroll', handleScroll(sectionId));
         }
       });
-    }
 
-    // Add event listener for showing sign-in modal
-    const handleShowSignIn = () => {
-      setShowSignIn(true);
-    };
-    window.addEventListener('showSignIn', handleShowSignIn);
-
-    // Get section from URL parameters
-    const section = searchParams.get('section');
-    if (section) {
-      // Map section IDs to their refs
-      const sectionRefs = {
-        'watching': watchingRef,
-        'will-watch': watchLaterRef,
-        'already-watched': alreadyWatchedRef,
-        'popular-movies': popularRef,
-        'top-rated-movies': topRatedRef,
-        'upcoming-movies': upcomingRef,
-        'local-movies': bhutaneseMoviesRef
+      const handleShowSignIn = () => {
+        setShowSignIn(true);
       };
+      window.addEventListener('showSignIn', handleShowSignIn);
 
-      const ref = sectionRefs[section];
-      if (ref?.current) {
-        // Wait for the page to load
-        setTimeout(() => {
-          const elementPosition = ref.current.getBoundingClientRect().top;
-          const offsetPosition = elementPosition + window.pageYOffset - 64; // 64px is header height
-
-          window.scrollTo({
-            top: offsetPosition,
-            behavior: 'smooth'
-          });
-        }, 100);
-      }
-    }
-
-    return () => {
-      Object.keys(carousels).forEach((sectionId) => {
-        const carousel = carousels[sectionId].current;
-        if (carousel) {
-          carousel.removeEventListener('scroll', handleScroll(sectionId));
-        }
-      });
-      // Clean up event listener
-      window.removeEventListener('showSignIn', handleShowSignIn);
+      return () => {
+        Object.keys(carousels).forEach((sectionId) => {
+          const carousel = carousels[sectionId].current;
+          if (carousel) {
+            carousel.removeEventListener('scroll', handleScroll(sectionId));
+          }
+        });
+        window.removeEventListener('showSignIn', handleShowSignIn);
+      };
     };
+
+    // Initialize everything
+    initializeSearchParams();
+    initializeData();
+    const cleanup = initializeEventListeners();
+
+    return cleanup;
   }, [status, session, searchParams]);
 
   // ... rest of your component code ...
