@@ -104,8 +104,11 @@ export const authOptions = {
       console.log('Session callback - session before:', session);
       
       if (token) {
-        session.user.id = token.id;
-        session.user.username = token.username;
+        session.user = {
+          ...session.user,
+          id: token.sub || token.id,
+          username: token.username
+        };
       }
       
       console.log('Session callback - session after:', session);
@@ -131,7 +134,7 @@ export const authOptions = {
       
       console.log('JWT callback - output token:', token);
       return token;
-    },
+    }
   },
   debug: true,
 };

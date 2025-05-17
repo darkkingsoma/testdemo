@@ -64,12 +64,14 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No user in session' }, { status: 401 });
     }
 
-    if (!session.user.id) {
-      console.log('POST /api/movies - No user ID in session');
-      return NextResponse.json({ error: 'No user ID in session' }, { status: 401 });
+    const userId = session.user.id || session.user.sub;
+    if (!userId) {
+      console.log('POST /api/movies - No user ID in session:', session.user);
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 401 });
     }
 
     console.log('POST /api/movies - Session user:', session.user);
+    console.log('POST /api/movies - User ID:', userId);
 
     const body = await request.json();
     console.log('POST /api/movies - Request body:', body);
@@ -101,24 +103,24 @@ export async function POST(request) {
 
     // Verify user exists
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
+      where: { id: userId }
     });
 
     console.log('POST /api/movies - Found user:', user);
 
     if (!user) {
-      console.error('POST /api/movies - User not found:', session.user.id);
+      console.error('POST /api/movies - User not found:', userId);
       return NextResponse.json({ 
         error: 'User not found',
         details: 'The user associated with this session does not exist',
-        userId: session.user.id
+        userId: userId
       }, { status: 404 });
     }
 
     // Check if movie already exists in user's list
     const existingMovie = await prisma.movieList.findFirst({
       where: {
-        userId: session.user.id,
+        userId: userId,
         movieId: movieId.toString(),
       },
     });
@@ -136,7 +138,7 @@ export async function POST(request) {
     }
 
     const movieData = {
-      userId: session.user.id,
+      userId: userId,
       movieId: movieId.toString(),
       title: title.substring(0, 191),
       poster: poster?.substring(0, 191) || '',
