@@ -15,8 +15,8 @@ function useSearchParamsWrapper() {
   return searchParams;
 }
 
-// Create a client component for the main content
-function MainContent() {
+// Client component that handles search params
+function PageContent() {
   const searchParams = useSearchParamsWrapper();
   const { data: session, status } = useSession();
   const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
@@ -709,7 +709,7 @@ function MainContent() {
   };
 
   useEffect(() => {
-    if (!searchParams) return; // Guard against undefined searchParams
+    if (!searchParams) return;
 
     console.log('Session status:', status, 'Session:', session);
     if (status !== 'loading' && session) {
@@ -1277,7 +1277,7 @@ function MainContent() {
 export default function Home() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <MainContent />
+      <PageContent />
     </Suspense>
   );
 }
