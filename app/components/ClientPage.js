@@ -9,9 +9,9 @@ import InfiniteMovieScroll from './InfiniteMovieScroll';
 import SearchBar from './SearchBar';
 import { useSearchParams } from 'next/navigation';
 
-export default function ClientPage() {
+export default function ClientPage({ session: serverSession }) {
   const searchParams = useSearchParams();
-  const { data: session, status } = useSession();
+  const { data: clientSession, status } = useSession();
   const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -55,18 +55,8 @@ export default function ClientPage() {
 
   // Initialize state
   const [isInitialized, setIsInitialized] = useState(false);
-  const [userMovieLists, setUserMovieLists] = useState({
-    Watching: [],
-    'Will Watch': [],
-    'Already Watched': [],
-  });
-
-  const [userListsState, setUserListsState] = useState({
-    Watching: { isFetching: false, error: null },
-    'Will Watch': { isFetching: false, error: null },
-    'Already Watched': { isFetching: false, error: null },
-  });
-
+  const [userMovieLists, setUserMovieLists] = useState([]);
+  const [userListsState, setUserListsState] = useState({});
   const [movieSectionState, setMovieSectionState] = useState({
     'popular-movies': { page: 1, genre: 'all', isFetching: false, movies: [], error: null, hasMore: true },
     'upcoming-movies': { page: 1, genre: 'all', isFetching: false, movies: [], error: null, hasMore: true },
@@ -74,9 +64,8 @@ export default function ClientPage() {
     'bhutanese-movies': { pageToken: '', genre: 'all', isFetching: false, searchQuery: '', movies: [], error: null, hasMore: true },
     'watching': { page: 1, genre: 'all', isFetching: false, movies: [], error: null, hasMore: true },
     'will-watch': { page: 1, genre: 'all', isFetching: false, movies: [], error: null, hasMore: true },
-    'already-watched': { page: 1, genre: 'all', isFetching: false, movies: [], error: null, hasMore: true },
+    'already-watched': { page: 1, genre: 'all', isFetching: false, movies: [], error: null, hasMore: true }
   });
-
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [bhutaneseSearchQuery, setBhutaneseSearchQuery] = useState('');
@@ -88,10 +77,12 @@ export default function ClientPage() {
   const [error, setError] = useState('');
   const [showSignIn, setShowSignIn] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
-  const [selectedList, setSelectedList] = useState('');
+  const [selectedList, setSelectedList] = useState(null);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [showSignInModal, setShowSignInModal] = useState(false);
+  const [showMovieModal, setShowMovieModal] = useState(false);
+  const [selectedMovieDetails, setSelectedMovieDetails] = useState(null);
 
   // Add refs for scroll navigation
   const homeRef = useRef(null);
@@ -139,7 +130,7 @@ export default function ClientPage() {
     // Initialize data fetching
     const initializeData = async () => {
       try {
-        if (status !== 'loading' && session) {
+        if (status !== 'loading' && clientSession) {
           // Fetch user movies for all sections
           await Promise.all([
             fetchUserMovies('watching', true),
@@ -220,7 +211,7 @@ export default function ClientPage() {
     handleSectionNavigation();
 
     return cleanup;
-  }, [isInitialized, status, session, searchParams]);
+  }, [isInitialized, status, clientSession, searchParams]);
 
   const fetchUserMovies = async (sectionId, reset = false) => {
     try {
@@ -704,7 +695,7 @@ export default function ClientPage() {
   };
 
   const handleAddToList = async () => {
-    if (!session) {
+    if (!serverSession) {
       setError('Please sign in to add movies to your list');
       return;
     }
@@ -760,6 +751,11 @@ export default function ClientPage() {
     }
   };
 
+  const handleMovieClick = (movie) => {
+    setSelectedMovieDetails(movie);
+    setShowMovieModal(true);
+  };
+
   if (!isInitialized || status === 'loading') {
     return (
       <div className="min-h-screen bg-black">
@@ -788,7 +784,7 @@ export default function ClientPage() {
                   MyMovieList
                 </h1>
                 <div className="flex items-center gap-4">
-                  {session ? (
+                  {serverSession ? (
                     <div className="flex items-center gap-4">
                       <button
                         onClick={() => signOut()}
@@ -915,6 +911,7 @@ export default function ClientPage() {
                   movies={searchResults}
                   title=""
                   source="tmdb"
+                  onMovieClick={handleMovieClick}
                 />
               </div>
             )}
@@ -949,6 +946,7 @@ export default function ClientPage() {
                   movies={movieSectionState['bhutanese-movies'].movies}
                   title=""
                   source="youtube"
+                  onMovieClick={handleMovieClick}
                 />
               </div>
             )}
@@ -962,6 +960,7 @@ export default function ClientPage() {
                     movies={movieSectionState['popular-movies'].movies}
                     title="Popular Movies"
                     source="tmdb"
+                    onMovieClick={handleMovieClick}
                   />
                 </div>
 
@@ -971,6 +970,7 @@ export default function ClientPage() {
                     movies={movieSectionState['top-rated-movies'].movies}
                     title="Top Rated Movies"
                     source="tmdb"
+                    onMovieClick={handleMovieClick}
                   />
                 </div>
 
@@ -980,13 +980,14 @@ export default function ClientPage() {
                     movies={movieSectionState['upcoming-movies'].movies}
                     title="Upcoming Movies"
                     source="tmdb"
+                    onMovieClick={handleMovieClick}
                   />
                 </div>
               </div>
             )}
 
             {/* User Lists - Always show these sections */}
-            {session && (
+            {serverSession && (
               <div className="space-y-12 mb-12">
                 {/* Currently Watching */}
                 <div ref={watchingRef}>
@@ -996,6 +997,7 @@ export default function ClientPage() {
                     category="watching"
                     onDelete={(movieId) => handleDeleteMovie('watching', movieId)}
                     source="tmdb"
+                    onMovieClick={handleMovieClick}
                   />
                 </div>
 
@@ -1007,6 +1009,7 @@ export default function ClientPage() {
                     category="will-watch"
                     onDelete={(movieId) => handleDeleteMovie('will-watch', movieId)}
                     source="tmdb"
+                    onMovieClick={handleMovieClick}
                   />
                 </div>
 
@@ -1018,6 +1021,7 @@ export default function ClientPage() {
                     category="already-watched"
                     onDelete={(movieId) => handleDeleteMovie('already-watched', movieId)}
                     source="tmdb"
+                    onMovieClick={handleMovieClick}
                   />
                 </div>
               </div>
@@ -1032,6 +1036,7 @@ export default function ClientPage() {
                     movies={movieSectionState['popular-movies'].movies}
                     title="Popular Movies"
                     source="tmdb"
+                    onMovieClick={handleMovieClick}
                   />
                 </div>
 
@@ -1041,6 +1046,7 @@ export default function ClientPage() {
                     movies={movieSectionState['top-rated-movies'].movies}
                     title="Top Rated Movies"
                     source="tmdb"
+                    onMovieClick={handleMovieClick}
                   />
                 </div>
 
@@ -1050,6 +1056,7 @@ export default function ClientPage() {
                     movies={movieSectionState['upcoming-movies'].movies}
                     title="Upcoming Movies"
                     source="tmdb"
+                    onMovieClick={handleMovieClick}
                   />
                 </div>
 
@@ -1060,6 +1067,7 @@ export default function ClientPage() {
                       movies={movieSectionState['bhutanese-movies'].movies}
                       title="Bhutanese Movies"
                       source="youtube"
+                      onMovieClick={handleMovieClick}
                     />
                   </div>
                 )}
@@ -1242,6 +1250,99 @@ export default function ClientPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Add Movie Modal */}
+        {showMovieModal && selectedMovieDetails && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-gray-900 p-8 rounded-xl shadow-2xl border border-white/5 w-full max-w-4xl">
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                  {selectedMovieDetails.title}
+                </h2>
+                <button
+                  onClick={() => setShowMovieModal(false)}
+                  className="text-white/70 hover:text-white transition-colors duration-200"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="relative aspect-[2/3] rounded-lg overflow-hidden">
+                  <img
+                    src={`https://image.tmdb.org/t/p/w500${selectedMovieDetails.poster_path}`}
+                    alt={selectedMovieDetails.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white/90">Overview</h3>
+                    <p className="text-white/70">{selectedMovieDetails.overview}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-lg font-semibold text-white/90">Details</h3>
+                    <div className="grid grid-cols-2 gap-4 mt-2">
+                      <div>
+                        <p className="text-white/70">Release Date</p>
+                        <p className="text-white">{selectedMovieDetails.release_date}</p>
+                      </div>
+                      <div>
+                        <p className="text-white/70">Rating</p>
+                        <p className="text-white">{selectedMovieDetails.vote_average}/10</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {serverSession && (
+                    <div className="mt-6">
+                      <h3 className="text-lg font-semibold text-white/90 mb-4">Add to List</h3>
+                      <div className="flex gap-4">
+                        <button
+                          onClick={() => {
+                            setSelectedList('watching');
+                            setSelectedMovie(selectedMovieDetails);
+                            handleAddToList();
+                            setShowMovieModal(false);
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                        >
+                          Currently Watching
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedList('will-watch');
+                            setSelectedMovie(selectedMovieDetails);
+                            handleAddToList();
+                            setShowMovieModal(false);
+                          }}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                        >
+                          Watch Later
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedList('already-watched');
+                            setSelectedMovie(selectedMovieDetails);
+                            handleAddToList();
+                            setShowMovieModal(false);
+                          }}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
+                        >
+                          Already Watched
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

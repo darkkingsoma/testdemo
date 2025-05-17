@@ -14,7 +14,7 @@ const formatDuration = (seconds) => {
   return `${minutes}m`;
 };
 
-export default function MovieCard({ movie, category, onDelete, source = 'tmdb' }) {
+export default function MovieCard({ movie, category, onDelete, source = 'tmdb', onMovieClick }) {
   const router = useRouter();
   const { data: session } = useSession();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -51,27 +51,18 @@ export default function MovieCard({ movie, category, onDelete, source = 'tmdb' }
     return movie.genre_ids.map(id => genreLookup[id] || '').filter(Boolean);
   };
 
-  const handleClick = (e) => {
+  const handleClick = () => {
     // Don't navigate if clicking the add button or modal
-    if (e.target.closest('.add-button') || e.target.closest('.modal-content')) {
+    if (event.target.closest('.add-button') || event.target.closest('.modal-content')) {
       return;
     }
 
-    if (source === 'youtube') {
-      // For YouTube videos, navigate to the movie detail page
-      const params = new URLSearchParams({
-        source: 'youtube',
-        category: category || ''
-      });
-      router.push(`/movie/${movie.id}?${params.toString()}`);
-    } else {
-      // For TMDB movies, navigate to the details page
-      const params = new URLSearchParams({
-        source: 'tmdb',
-        category: category || ''
-      });
-      router.push(`/movie/${movie.id}?${params.toString()}`);
-    }
+    // Navigate to movie details page
+    const params = new URLSearchParams({
+      source: source,
+      category: category || ''
+    });
+    router.push(`/movie/${movie.id}?${params.toString()}`);
   };
 
   const handleAddClick = (e) => {
@@ -193,29 +184,58 @@ export default function MovieCard({ movie, category, onDelete, source = 'tmdb' }
 
   return (
     <div 
+      className="relative group cursor-pointer"
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="relative group cursor-pointer bg-gray-900 rounded-lg overflow-hidden shadow-lg transition-transform duration-300 hover:scale-105"
     >
-      <div className="relative aspect-[2/3]">
-        <Image
-          src={movie.poster_path ? (source === 'youtube' ? movie.poster_path : `https://image.tmdb.org/t/p/w500${movie.poster_path}`) : '/placeholder.jpg'}
+      <div className="relative aspect-[2/3] rounded-lg overflow-hidden">
+        <img
+          src={source === 'youtube' 
+            ? movie.poster_path 
+            : movie.poster_path 
+              ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+              : '/placeholder.jpg'
+          }
           alt={movie.title}
-          fill
-          className={`object-cover transition-transform duration-300 ${
-            isHovered ? 'scale-110' : 'scale-100'
-          }`}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = '/placeholder.jpg';
+          }}
         />
-        {source === 'youtube' && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div className="text-white text-center p-4">
-              <p className="font-semibold mb-2">{movie.title}</p>
-              <p className="text-sm text-gray-300">{movie.channelTitle}</p>
-            </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <h3 className="text-white font-semibold line-clamp-2">{movie.title}</h3>
+            <p className="text-white/70 text-sm mt-1">
+              {source === 'youtube' 
+                ? movie.channelTitle 
+                : movie.release_date 
+                  ? new Date(movie.release_date).getFullYear() 
+                  : 'N/A'
+              }
+            </p>
+            {source === 'youtube' && (
+              <p className="text-white/70 text-sm mt-1">
+                {formatDuration(movie.duration)}
+              </p>
+            )}
           </div>
-        )}
+        </div>
       </div>
+      {onDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(movie.id);
+          }}
+          className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
 
       {/* Add Button - Show for both TMDB and YouTube movies when not in user lists */}
       {!category && session && (

@@ -9,14 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@prisma/client": "^5.10.2",
+    "@auth/prisma-adapter": "^2.9.1",
+    "@prisma/client": "^5.22.0",
     "@tailwindcss/postcss": "^4.1.5",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.9.1",
     "next": "^15.3.2",
-    "next-auth": "^4.24.5",
+    "next-auth": "^4.24.11",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",
