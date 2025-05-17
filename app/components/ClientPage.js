@@ -116,36 +116,48 @@ export default function ClientPage() {
 
   // Initialize the component
   useEffect(() => {
-    if (!searchParams) {
-      console.log('Search params not initialized yet');
-      return;
-    }
+    const initialize = () => {
+      if (!searchParams) {
+        console.log('Search params not initialized yet');
+        return;
+      }
+      setIsInitialized(true);
+    };
 
-    setIsInitialized(true);
+    initialize();
   }, [searchParams]);
 
   // Main effect that runs after initialization
   useEffect(() => {
-    if (!isInitialized || !searchParams) return;
+    if (!isInitialized || !searchParams) {
+      console.log('Waiting for initialization or search params');
+      return;
+    }
+
+    console.log('Component initialized, search params:', searchParams.toString());
 
     // Initialize data fetching
     const initializeData = async () => {
-      if (status !== 'loading' && session) {
-        // Fetch user movies for all sections
-        await Promise.all([
-          fetchUserMovies('watching', true),
-          fetchUserMovies('will-watch', true),
-          fetchUserMovies('already-watched', true)
-        ]);
-      }
-      
-      if (status !== 'loading') {
-        await Promise.all([
-          fetchMoviesForSection('popular-movies'),
-          fetchMoviesForSection('upcoming-movies'),
-          fetchMoviesForSection('top-rated-movies'),
-          fetchBhutaneseMovies()
-        ]);
+      try {
+        if (status !== 'loading' && session) {
+          // Fetch user movies for all sections
+          await Promise.all([
+            fetchUserMovies('watching', true),
+            fetchUserMovies('will-watch', true),
+            fetchUserMovies('already-watched', true)
+          ]);
+        }
+        
+        if (status !== 'loading') {
+          await Promise.all([
+            fetchMoviesForSection('popular-movies'),
+            fetchMoviesForSection('upcoming-movies'),
+            fetchMoviesForSection('top-rated-movies'),
+            fetchBhutaneseMovies()
+          ]);
+        }
+      } catch (error) {
+        console.error('Error initializing data:', error);
       }
     };
 
