@@ -71,6 +71,11 @@ export default function MovieCard({ movie, category, onDelete, source = 'tmdb', 
   };
 
   const handleAddToList = async () => {
+    if (!session) {
+      setError('Please sign in to add movies to your list');
+      return;
+    }
+
     if (!selectedList) {
       setError('Please select a list');
       return;
@@ -91,6 +96,9 @@ export default function MovieCard({ movie, category, onDelete, source = 'tmdb', 
         source: source || 'tmdb'
       };
 
+      console.log('Sending movie data:', movieData);
+      console.log('Current session:', session);
+
       const response = await fetch('/api/movies', {
         method: 'POST',
         headers: {
@@ -102,6 +110,7 @@ export default function MovieCard({ movie, category, onDelete, source = 'tmdb', 
       const data = await response.json();
       
       if (!response.ok) {
+        console.error('Add to list error:', data);
         throw new Error(data.error || 'Failed to add movie to list');
       }
       

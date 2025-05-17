@@ -11,7 +11,8 @@ import { useSearchParams } from 'next/navigation';
 
 export default function ClientPage({ session: serverSession }) {
   const searchParams = useSearchParams();
-  const { data: clientSession, status } = useSession();
+  const { data: session, status } = useSession();
+  const activeSession = session || serverSession;
   const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
   const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -130,7 +131,7 @@ export default function ClientPage({ session: serverSession }) {
     // Initialize data fetching
     const initializeData = async () => {
       try {
-        if (status !== 'loading' && clientSession) {
+        if (status !== 'loading' && session) {
           // Fetch user movies for all sections
           await Promise.all([
             fetchUserMovies('watching', true),
@@ -211,7 +212,7 @@ export default function ClientPage({ session: serverSession }) {
     handleSectionNavigation();
 
     return cleanup;
-  }, [isInitialized, status, clientSession, searchParams]);
+  }, [isInitialized, status, session, searchParams]);
 
   const fetchUserMovies = async (sectionId, reset = false) => {
     try {
@@ -695,7 +696,7 @@ export default function ClientPage({ session: serverSession }) {
   };
 
   const handleAddToList = async () => {
-    if (!serverSession) {
+    if (!activeSession) {
       setError('Please sign in to add movies to your list');
       return;
     }
@@ -725,6 +726,9 @@ export default function ClientPage({ session: serverSession }) {
         source: 'tmdb'
       };
 
+      console.log('Sending movie data:', movieData);
+      console.log('Current session:', activeSession);
+
       const response = await fetch('/api/movies', {
         method: 'POST',
         headers: {
@@ -736,6 +740,7 @@ export default function ClientPage({ session: serverSession }) {
       const data = await response.json();
       
       if (!response.ok) {
+        console.error('Add to list error:', data);
         throw new Error(data.error || 'Failed to add movie to list');
       }
       
@@ -784,8 +789,11 @@ export default function ClientPage({ session: serverSession }) {
                   MyMovieList
                 </h1>
                 <div className="flex items-center gap-4">
-                  {serverSession ? (
+                  {activeSession ? (
                     <div className="flex items-center gap-4">
+                      <span className="text-white/70">
+                        {activeSession.user?.username || activeSession.user?.email}
+                      </span>
                       <button
                         onClick={() => signOut()}
                         className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200"
@@ -987,7 +995,7 @@ export default function ClientPage({ session: serverSession }) {
             )}
 
             {/* User Lists - Always show these sections */}
-            {serverSession && (
+            {activeSession && (
               <div className="space-y-12 mb-12">
                 {/* Currently Watching */}
                 <div ref={watchingRef}>
@@ -1301,7 +1309,7 @@ export default function ClientPage({ session: serverSession }) {
                     </div>
                   </div>
 
-                  {serverSession && (
+                  {activeSession && (
                     <div className="mt-6">
                       <h3 className="text-lg font-semibold text-white/90 mb-4">Add to List</h3>
                       <div className="flex gap-4">

@@ -6,12 +6,19 @@ import prisma from '../../../lib/prisma';
 export async function GET(request) {
   try {
     const session = await getServerSession(authOptions);
+    console.log('GET /api/movies - Session:', session);
+    
     if (!session) {
+      console.log('GET /api/movies - No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Log the session to debug
-    console.log('Session user:', session.user);
+    if (!session.user?.id) {
+      console.log('GET /api/movies - No user ID in session:', session);
+      return NextResponse.json({ error: 'No user ID in session' }, { status: 401 });
+    }
+
+    console.log('GET /api/movies - Fetching movies for user:', session.user.id);
 
     const userMovies = await prisma.movieList.findMany({
       where: { 
@@ -19,10 +26,8 @@ export async function GET(request) {
       },
     });
 
-    // Log the found movies to debug
-    console.log('Found movies:', userMovies);
+    console.log('GET /api/movies - Found movies:', userMovies);
 
-    // Normalize categories for comparison
     const moviesByCategory = {
       watching: userMovies.filter(movie => 
         movie.category.toLowerCase() === 'watching'
@@ -39,7 +44,7 @@ export async function GET(request) {
 
     return NextResponse.json(moviesByCategory);
   } catch (error) {
-    console.error('Error fetching movies:', error);
+    console.error('GET /api/movies - Error:', error);
     return NextResponse.json({ error: 'Failed to fetch movies' }, { status: 500 });
   }
 }
@@ -47,40 +52,32 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const session = await getServerSession(authOptions);
-    console.log('Full session object:', JSON.stringify(session, null, 2));
+    console.log('POST /api/movies - Full session:', session);
     
     if (!session) {
-      console.log('No session found');
+      console.log('POST /api/movies - No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     if (!session.user) {
-      console.log('No user in session');
+      console.log('POST /api/movies - No user in session');
       return NextResponse.json({ error: 'No user in session' }, { status: 401 });
     }
 
     if (!session.user.id) {
-      console.log('No user ID in session');
+      console.log('POST /api/movies - No user ID in session');
       return NextResponse.json({ error: 'No user ID in session' }, { status: 401 });
     }
 
-    console.log('Session user object:', JSON.stringify(session.user, null, 2));
+    console.log('POST /api/movies - Session user:', session.user);
 
     const body = await request.json();
-    console.log('Raw request body:', body);
+    console.log('POST /api/movies - Request body:', body);
 
     const { movieId, title, poster, category, overview, releaseDate, rating, votes, genreIds, description, source } = body;
 
-    console.log('Parsed movie data:', { 
-      movieId, 
-      title, 
-      category, 
-      source,
-      userId: session.user.id 
-    });
-
     if (!movieId || !title || !category) {
-      console.log('Missing required fields:', { movieId, title, category });
+      console.log('POST /api/movies - Missing required fields:', { movieId, title, category });
       return NextResponse.json({ 
         error: 'Missing required fields',
         details: { movieId, title, category }
@@ -100,17 +97,17 @@ export async function POST(request) {
     };
 
     const normalizedCategory = categoryMap[category] || category.toLowerCase();
-    console.log('Normalized category:', normalizedCategory);
+    console.log('POST /api/movies - Normalized category:', normalizedCategory);
 
     // Verify user exists
     const user = await prisma.user.findUnique({
       where: { id: session.user.id }
     });
 
-    console.log('Found user in database:', user);
+    console.log('POST /api/movies - Found user:', user);
 
     if (!user) {
-      console.error('User not found:', session.user.id);
+      console.error('POST /api/movies - User not found:', session.user.id);
       return NextResponse.json({ 
         error: 'User not found',
         details: 'The user associated with this session does not exist',
@@ -126,20 +123,19 @@ export async function POST(request) {
       },
     });
 
-    console.log('Existing movie check:', existingMovie);
+    console.log('POST /api/movies - Existing movie check:', existingMovie);
 
     if (existingMovie) {
-      console.log('Updating existing movie:', existingMovie.id);
-      // Update the category if the movie already exists
+      console.log('POST /api/movies - Updating existing movie:', existingMovie.id);
       const updatedMovie = await prisma.movieList.update({
         where: { id: existingMovie.id },
         data: { category: normalizedCategory },
       });
-      console.log('Updated movie:', updatedMovie);
+      console.log('POST /api/movies - Updated movie:', updatedMovie);
       return NextResponse.json(updatedMovie);
     }
 
-    console.log('Creating new movie entry with data:', {
+    const movieData = {
       userId: session.user.id,
       movieId: movieId.toString(),
       title: title.substring(0, 191),
@@ -152,31 +148,19 @@ export async function POST(request) {
       genreIds: typeof genreIds === 'string' ? genreIds.substring(0, 191) : '[]',
       description: (description || '').substring(0, 191),
       source: source || 'tmdb'
-    });
+    };
 
-    // Create new movie entry
+    console.log('POST /api/movies - Creating new movie with data:', movieData);
+
     const movie = await prisma.movieList.create({
-      data: {
-        userId: session.user.id,
-        movieId: movieId.toString(),
-        title: title.substring(0, 191),
-        poster: poster?.substring(0, 191) || '',
-        category: normalizedCategory,
-        overview: (overview || '').substring(0, 191),
-        releaseDate: (releaseDate || '').substring(0, 191),
-        rating: (rating || 'N/A').substring(0, 191),
-        votes: (votes || '0').substring(0, 191),
-        genreIds: typeof genreIds === 'string' ? genreIds.substring(0, 191) : '[]',
-        description: (description || '').substring(0, 191),
-        source: source || 'tmdb'
-      },
+      data: movieData
     });
 
-    console.log('Created new movie:', movie);
+    console.log('POST /api/movies - Created new movie:', movie);
     return NextResponse.json(movie);
   } catch (error) {
-    console.error('Error in POST /api/movies:', error);
-    console.error('Error stack:', error.stack);
+    console.error('POST /api/movies - Error:', error);
+    console.error('POST /api/movies - Error stack:', error.stack);
     return NextResponse.json({ 
       error: 'Internal server error',
       details: error.message,
