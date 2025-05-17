@@ -61,7 +61,7 @@ const handler = NextAuth({
 
         if (!existingUser) {
           // Create new user from Google profile
-          await prisma.user.create({
+          const newUser = await prisma.user.create({
             data: {
               email: profile.email,
               username: profile.email.split('@')[0], // Use email prefix as username
@@ -69,6 +69,9 @@ const handler = NextAuth({
               password: '', // Empty password for Google users
             }
           });
+          user.id = newUser.id;
+        } else {
+          user.id = existingUser.id;
         }
       }
       return true;

@@ -91,20 +91,32 @@ export async function POST(request) {
     const normalizedCategory = categoryMap[category] || category.toLowerCase();
     console.log('Normalized category:', normalizedCategory);
 
-    // Use userId directly as string
-    const userId = session.user.id;
-    if (!userId) {
-      console.error('Invalid userId:', session.user.id);
+    // Validate user ID
+    if (!session.user.id) {
+      console.error('Invalid userId in session:', session.user);
       return NextResponse.json({ 
         error: 'Invalid user ID',
-        details: 'User ID is required'
+        details: 'User ID is missing from session'
       }, { status: 400 });
+    }
+
+    // Verify user exists
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id }
+    });
+
+    if (!user) {
+      console.error('User not found:', session.user.id);
+      return NextResponse.json({ 
+        error: 'User not found',
+        details: 'The user associated with this session does not exist'
+      }, { status: 404 });
     }
 
     // Check if movie already exists in user's list
     const existingMovie = await prisma.movieList.findFirst({
       where: {
-        userId: userId,
+        userId: session.user.id,
         movieId: movieId.toString(),
       },
     });
@@ -123,7 +135,7 @@ export async function POST(request) {
     }
 
     console.log('Creating new movie entry with data:', {
-      userId,
+      userId: session.user.id,
       movieId: movieId.toString(),
       title: title.substring(0, 191),
       poster: poster.substring(0, 191),
@@ -140,7 +152,7 @@ export async function POST(request) {
     // Create new movie entry
     const movie = await prisma.movieList.create({
       data: {
-        userId: userId,
+        userId: session.user.id,
         movieId: movieId.toString(),
         title: title.substring(0, 191),
         poster: poster.substring(0, 191),
@@ -158,12 +170,7 @@ export async function POST(request) {
     console.log('Created new movie:', movie);
     return NextResponse.json(movie);
   } catch (error) {
-    console.error('Error adding movie:', error);
-    console.error('Error stack:', error.stack);
-    return NextResponse.json({ 
-      error: 'Failed to add movie',
-      details: error.message,
-      stack: error.stack
-    }, { status: 500 });
+    console.error('Error in POST /api/movies:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
