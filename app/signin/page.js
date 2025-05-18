@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 
@@ -272,6 +272,18 @@ function SignInClient() {
 // Main component with dynamic import
 export default function SigninPage() {
   return (
-    <SignInClient />
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-gray-800 rounded-lg shadow-xl overflow-hidden p-8">
+            <div className="flex items-center justify-center">
+              <div className="w-8 h-8 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <SignInClient />
+    </Suspense>
   );
 }
