@@ -2,9 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
+import Image from 'next/image';
 
-// Create a client-only component that contains all the functionality
-function SignInClient() {
+export default function SigninPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -266,12 +266,5 @@ function SignInClient() {
         </div>
       </div>
     </div>
-  );
-}
-
-// Main component with dynamic import
-export default function SigninPage() {
-  return (
-    <SignInClient />
   );
 }
