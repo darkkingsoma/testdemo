@@ -3,6 +3,20 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 
+// Component that handles search params
+function SearchParamsHandler({ onError }) {
+  const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      onError(error === 'OAuthSignin' ? 'Error signing in with Google' : 'An error occurred during sign in');
+    }
+  }, [searchParams, onError]);
+
+  return null;
+}
+
 // Create a client-only component that contains all the functionality
 function SignInClient() {
   const [username, setUsername] = useState('');
@@ -12,7 +26,6 @@ function SignInClient() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { data: session } = useSession();
 
   useEffect(() => {
@@ -20,13 +33,6 @@ function SignInClient() {
       router.push('/');
     }
   }, [session, router]);
-
-  useEffect(() => {
-    const error = searchParams.get('error');
-    if (error) {
-      setError(error === 'OAuthSignin' ? 'Error signing in with Google' : 'An error occurred during sign in');
-    }
-  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -133,6 +139,17 @@ function SignInClient() {
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+      <Suspense fallback={
+        <div className="w-full max-w-md">
+          <div className="bg-gray-800 rounded-lg shadow-xl overflow-hidden p-8">
+            <div className="flex items-center justify-center">
+              <div className="w-8 h-8 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+            </div>
+          </div>
+        </div>
+      }>
+        <SearchParamsHandler onError={setError} />
+      </Suspense>
       <div className="w-full max-w-md">
         <div className="bg-gray-800 rounded-lg shadow-xl overflow-hidden">
           <div className="p-8">
@@ -269,21 +286,7 @@ function SignInClient() {
   );
 }
 
-// Main component with dynamic import
+// Main component
 export default function SigninPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-gray-800 rounded-lg shadow-xl overflow-hidden p-8">
-            <div className="flex items-center justify-center">
-              <div className="w-8 h-8 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    }>
-      <SignInClient />
-    </Suspense>
-  );
+  return <SignInClient />;
 }
