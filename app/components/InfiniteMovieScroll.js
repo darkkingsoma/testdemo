@@ -11,6 +11,64 @@ export default function InfiniteMovieScroll({ movies, title, category, onDelete,
   const [uniqueMovies, setUniqueMovies] = useState([]);
   const [processedIds] = useState(new Set());
   const scrollTimeoutRef = useRef(null);
+  const MAX_LOAD = 20;
+  const BATCH_SIZE = 5;
+
+  // Function to load more movies
+  const loadMore = useCallback(async () => {
+    if (isLoading || !hasMore) return;
+
+    setIsLoading(true);
+    try {
+      // Get the next batch of movies
+      const startIndex = (page - 1) * BATCH_SIZE;
+      const endIndex = page * BATCH_SIZE;
+      
+      // Check if we've reached the max load or end of available movies
+      if (startIndex >= MAX_LOAD || startIndex >= movies.length) {
+        setHasMore(false);
+        setIsLoading(false);
+        return;
+      }
+
+      const newMovies = movies.slice(startIndex, endIndex);
+      
+      if (newMovies.length === 0) {
+        setHasMore(false);
+        setIsLoading(false);
+        return;
+      }
+
+      // Filter out duplicates based on movie ID
+      const uniqueNewMovies = newMovies.filter(movie => {
+        const movieKey = `${movie.id}-${movie.source || source}`;
+        if (processedIds.has(movieKey)) {
+          return false;
+        }
+        processedIds.add(movieKey);
+        return true;
+      });
+
+      if (uniqueNewMovies.length > 0) {
+        setUniqueMovies(prev => [...prev, ...uniqueNewMovies]);
+        setPage(prev => prev + 1);
+        // Update hasMore based on whether we've reached MAX_LOAD
+        setHasMore(uniqueMovies.length + uniqueNewMovies.length < MAX_LOAD && endIndex < movies.length);
+      } else {
+        // If no new unique movies were found and we're at the end of the list
+        if (endIndex >= movies.length || endIndex >= MAX_LOAD) {
+          setHasMore(false);
+        } else {
+          // Try the next page
+          setPage(prev => prev + 1);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading more movies:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isLoading, hasMore, page, movies, source, processedIds, uniqueMovies.length]);
 
   // Debounced scroll handler
   const handleScroll = useCallback(() => {
@@ -33,66 +91,15 @@ export default function InfiniteMovieScroll({ movies, title, category, onDelete,
         loadMore();
       }
     }, 150); // 150ms debounce
-  }, [isLoading, hasMore]);
-
-  // Function to load more movies
-  const loadMore = useCallback(async () => {
-    if (isLoading || !hasMore) return;
-
-    setIsLoading(true);
-    try {
-      // Get the next batch of movies
-      const startIndex = (page - 1) * 10;
-      const endIndex = page * 10;
-      
-      // Check if we've reached the end of available movies
-      if (startIndex >= movies.length) {
-        setHasMore(false);
-        return;
-      }
-
-      const newMovies = movies.slice(startIndex, endIndex);
-      
-      if (newMovies.length === 0) {
-        setHasMore(false);
-        return;
-      }
-
-      // Filter out duplicates based on movie ID
-      const uniqueNewMovies = newMovies.filter(movie => {
-        const movieKey = `${movie.id}-${movie.source || source}`;
-        if (processedIds.has(movieKey)) {
-          return false;
-        }
-        processedIds.add(movieKey);
-        return true;
-      });
-
-      if (uniqueNewMovies.length > 0) {
-        setUniqueMovies(prev => [...prev, ...uniqueNewMovies]);
-        setPage(prev => prev + 1);
-      } else {
-        // If no new unique movies were found and we're at the end of the list
-        if (endIndex >= movies.length) {
-          setHasMore(false);
-        } else {
-          // Try the next page
-          setPage(prev => prev + 1);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading more movies:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isLoading, hasMore, page, movies, source, processedIds]);
+  }, [isLoading, hasMore, loadMore]);
 
   // Initialize movies when the component mounts or movies prop changes
   useEffect(() => {
     if (movies && movies.length > 0) {
       // Reset state when movies prop changes
       processedIds.clear();
-      const initialMovies = movies.slice(0, 10);
+      setPage(1);
+      const initialMovies = movies.slice(0, BATCH_SIZE);
       
       // Filter initial movies for uniqueness
       const uniqueInitialMovies = initialMovies.filter(movie => {
@@ -106,13 +113,13 @@ export default function InfiniteMovieScroll({ movies, title, category, onDelete,
 
       setUniqueMovies(uniqueInitialMovies);
       setPage(2); // Start from page 2 since we've shown page 1
-      setHasMore(movies.length > 10); // Set hasMore based on remaining movies
+      setHasMore(movies.length > BATCH_SIZE && uniqueInitialMovies.length < MAX_LOAD);
     } else {
       setUniqueMovies([]);
       setPage(1);
       setHasMore(false);
     }
-  }, [movies, source]);
+  }, [movies, source, BATCH_SIZE]);
 
   // Add scroll event listener with cleanup
   useEffect(() => {
@@ -142,7 +149,7 @@ export default function InfiniteMovieScroll({ movies, title, category, onDelete,
       ) : (
         <div
           ref={scrollContainerRef}
-          className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide"
+          className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide snap-x snap-mandatory"
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
@@ -151,7 +158,7 @@ export default function InfiniteMovieScroll({ movies, title, category, onDelete,
           {uniqueMovies.map((movie, index) => (
             <div 
               key={`${movie.id}-${movie.source || source}-${index}`} 
-              className="flex-none w-64"
+              className="flex-none w-64 snap-start"
               data-genres={movie.genre_ids ? movie.genre_ids.join(' ') : ''}
             >
               <MovieCard

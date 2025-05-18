@@ -382,7 +382,7 @@ export default function ClientPage({ session: serverSession }) {
       }));
 
       const searchTerm = query || 'bhutanese movie dzongkha';
-      const searchURL = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(searchTerm)}&type=video&key=${YOUTUBE_API_KEY}&pageToken=${pageToken}&maxResults=10&videoDuration=long&regionCode=BT`;
+      const searchURL = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(searchTerm)}&type=video&key=${YOUTUBE_API_KEY}&pageToken=${pageToken}&maxResults=20&videoDuration=long&regionCode=BT`;
       
       const response = await fetch(searchURL);
       if (!response.ok) {
@@ -436,18 +436,18 @@ export default function ClientPage({ session: serverSession }) {
           duration: parseYouTubeDuration(video.contentDetails.duration)
         }));
 
-      const existingIds = new Set(movieSectionState[sectionId].movies.map(movie => movie.id));
-      const newMovies = movies.filter(movie => !existingIds.has(movie.id));
+      // If reset is true, replace all movies, otherwise append new ones
+      const updatedMovies = reset ? movies : [...movieSectionState[sectionId].movies, ...movies];
 
       setMovieSectionState(prev => ({
         ...prev,
         [sectionId]: {
           ...prev[sectionId],
-          movies: reset ? movies : [...prev[sectionId].movies, ...newMovies],
+          movies: updatedMovies,
           pageToken: results.nextPageToken || '',
           searchQuery: query,
           isFetching: false,
-          hasMore: !!results.nextPageToken,
+          hasMore: !!results.nextPageToken && updatedMovies.length < 20,
           error: null
         }
       }));
