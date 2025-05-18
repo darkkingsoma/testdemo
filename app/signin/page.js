@@ -26,13 +26,14 @@ function SignInClient() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
-    if (session) {
+    if (status === 'authenticated') {
       router.push('/');
+      router.refresh();
     }
-  }, [session, router]);
+  }, [status, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -136,6 +137,20 @@ function SignInClient() {
       setIsLoading(false);
     }
   };
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-gray-800 rounded-lg shadow-xl overflow-hidden p-8">
+            <div className="flex items-center justify-center">
+              <div className="w-8 h-8 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
