@@ -7,6 +7,15 @@ export const metadata = {
   description: 'A movie listing website',
   viewport: 'width=device-width, initial-scale=1',
   charset: 'utf-8',
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icon.png', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon.png' },
+    ],
+  },
 };
 
 export default function RootLayout({ children }) {
