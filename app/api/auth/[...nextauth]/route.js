@@ -52,57 +52,114 @@ export const authOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
     }),
   ],
   session: {
     strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: '/signin',
+    error: '/signin',
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      console.log('SignIn callback:', { user, account, profile });
-      
       if (account?.provider === 'google') {
-        // Check if user exists
-        const existingUser = await prisma.user.findUnique({
-          where: { email: profile.email }
-        });
+        try {
+          if (!profile?.email) {
+            console.error('No email provided by Google');
+            return false;
+          }
 
-        if (!existingUser) {
-          // Create new user from Google profile
-          const newUser = await prisma.user.create({
-            data: {
-              email: profile.email,
-              username: profile.email.split('@')[0], // Use email prefix as username
-              name: profile.name,
-              password: '', // Empty password for Google users
-              lastLoginAt: new Date(),
-              loginCount: 1
+          // Check if user exists
+          const existingUser = await prisma.user.findUnique({
+            where: { email: profile.email }
+          });
+
+          if (!existingUser) {
+            // Create new user from Google profile
+            const newUser = await prisma.user.create({
+              data: {
+                email: profile.email,
+                username: profile.email.split('@')[0], // Use email prefix as username
+                name: profile.name,
+                password: '', // Empty password for Google users
+                lastLoginAt: new Date(),
+                loginCount: 1
+              }
+            });
+            user.id = newUser.id;
+          } else {
+            // Update login stats for existing user
+            await prisma.user.update({
+              where: { id: existingUser.id },
+              data: {
+                lastLoginAt: new Date(),
+                loginCount: { increment: 1 }
+              }
+            });
+            user.id = existingUser.id;
+          }
+
+          // Check if account already exists
+          const existingAccount = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId
+              }
             }
           });
-          user.id = newUser.id;
-          console.log('Created new user:', newUser);
-        } else {
-          // Update login stats for existing user
-          await prisma.user.update({
-            where: { id: existingUser.id },
-            data: {
-              lastLoginAt: new Date(),
-              loginCount: { increment: 1 }
-            }
-          });
-          user.id = existingUser.id;
-          console.log('Found existing user:', existingUser);
+
+          if (!existingAccount) {
+            // Link the Google account to the user
+            await prisma.account.create({
+              data: {
+                userId: user.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+                refresh_token: account.refresh_token,
+              }
+            });
+          } else {
+            // Update existing account with new tokens
+            await prisma.account.update({
+              where: {
+                id: existingAccount.id
+              },
+              data: {
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+                refresh_token: account.refresh_token,
+              }
+            });
+          }
+
+          return true;
+        } catch (error) {
+          console.error('Error in Google signIn callback:', error);
+          return false;
         }
       }
       return true;
     },
     async session({ session, token }) {
-      console.log('Session callback - token:', token);
-      console.log('Session callback - session before:', session);
-      
       if (token) {
         session.user = {
           ...session.user,
@@ -110,19 +167,15 @@ export const authOptions = {
           username: token.username
         };
       }
-      
-      console.log('Session callback - session after:', session);
       return session;
     },
     async jwt({ token, user, account, profile }) {
-      console.log('JWT callback - input:', { token, user, account, profile });
-      
       if (user) {
         token.id = user.id;
         token.username = user.username;
       }
       
-      if (account?.provider === 'google') {
+      if (account?.provider === 'google' && profile) {
         const dbUser = await prisma.user.findUnique({
           where: { email: profile.email }
         });
@@ -132,11 +185,10 @@ export const authOptions = {
         }
       }
       
-      console.log('JWT callback - output token:', token);
       return token;
     }
   },
-  debug: true,
+  debug: true, // Enable debug mode temporarily
 };
 
 const handler = NextAuth(authOptions);

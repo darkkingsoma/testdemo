@@ -264,6 +264,16 @@ export default function BhutaneseMoviePage() {
             </div>
             
             <h1 className="text-3xl font-bold mt-4">{movie.title}</h1>
+
+            {/* Disabled Stream Button for Bhutanese movies */}
+            <div className="flex gap-2 mt-4 mb-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-700 text-white opacity-60 cursor-not-allowed"
+                disabled
+              >
+                Stream
+              </button>
+            </div>
             
             <div className="flex items-center gap-4 mt-2 text-gray-400">
               <span>{new Date(movie.publishedAt).toLocaleDateString()}</span>

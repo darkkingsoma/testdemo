@@ -8,8 +8,10 @@ export default withAuth({
 
 export const config = {
   matcher: [
+    '/',
+    '/movie/:path*',
     '/api/movies/:path*',
-    '/api/lists/:path*',
-    '/api/comments/:path*',
+    '/api/user/:path*',
+    '/((?!api/auth|signin|signup|_next/static|_next/image|favicon.ico).*)',
   ],
 }; 
